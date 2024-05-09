@@ -18,15 +18,11 @@
 #define MAX_CHANNELS 10
 #define MAX_CHANNEL_NAME 50
 
+#include "Client.hpp"
+
 void send_message(int client_socket, const char *message) {
 	write(client_socket, message, strlen(message));
 }
-
-struct client
-{
-
-};
-
 
 int main()
 {
@@ -72,7 +68,23 @@ int main()
 		int ret = poll(fds, clientSocketsVector.size() + 1, -1);
 		memset(buf, '\0', sizeof(buf));
 		int nbytes = recv(fds[ret].fd, buf, sizeof(buf), 0);
-		std::cout << ret << " " << buf << " " << sizeof(buf) << std::endl;
+		(void)nbytes;
+		std::cout << "____ " << ret << " " << sizeof(buf) << " " << buf << std::endl;
+
+		if (strncmp(buf, "NICK", 4) == 0)
+		{
+			int i = 0;
+			while(buf[i])
+			{
+				if (buf[i] == '\n')
+					std::cout << " = " << std::endl;
+				else
+					std::cout << buf[i] << "-";
+				i++;
+			}
+		}
+
+
 
 		if (ret < 0)
 		{
