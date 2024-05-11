@@ -1,7 +1,7 @@
 #include "Client.hpp"
 
 
-Client::Client(int fd, std::string name) : _fd(fd), _name(name)
+Client::Client(int fd, std::string name, std::string user) : _fd(fd), _name(name), _user(user)
 {
 
 }
@@ -14,6 +14,12 @@ int Client::getfd()
 std::string    Client::getname()
 {
     return (_name);
+}
+
+
+std::string    Client::getuser()
+{
+    return (_user);
 }
 
 void    Client::setfd()

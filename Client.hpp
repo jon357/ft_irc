@@ -6,10 +6,11 @@
 class Client
 {
     public:
-        Client(int fd, std::string name);
+        Client(int fd, std::string name, std::string user);
 
         int getfd();
         std::string getname();
+        std::string getuser();
 
         void    setfd();
         void    setname();
@@ -17,5 +18,6 @@ class Client
     private:
         int _fd;
         std::string _name;
+        std::string _user;
         // std::vector<Channel>    _clientChannelList;
 };
