@@ -87,87 +87,120 @@ int main()
 
 	while (on > 1)
 	{
+		std::cout << "_*_" << std::endl;
+
 		int ret = poll(fds, clientSocketsVector.size() + 1, -1);
-		memset(buf, '\0', sizeof(buf));
-		int nbytes = recv(fds[ret].fd, buf, sizeof(buf), 0);
-		(void)nbytes;
-		std::cout << "____ " << ret << " " << sizeof(buf) << " " << buf << std::endl;
-
-		if (strncmp(buf, "NICK", 4) == 0)
-		{
-			//std::string result = "jcheca :Welcome to the ft_irc Network, jcheca[!jcheca@ft_irc]";
-			
-			//std::cout << result << " " << fds[ret].fd << std::endl;
-			//send_message(fds[ret].fd, result.c_str());
-
-			send(fds[ret].fd, "001 :Welcome to the IRC server!\r\n", 27, 0);
-		}
 	
-/*
-			int new_fd = accept(sockfd, NULL, NULL);
-			int j = 0;
 
-			while (buf[j])
-			{
-				if (buf[j] == '\r')
-					std::cout << " **** " << std::endl;
-
-				std::cout << buf[j++] << std::endl;
-			}
-			std::cout << " ************* " << std::endl;
-
-
-
-			std::cout << ".__ " << std::endl;
-			std::vector<std::string> tokens = split(buf, " \n\r\t");
-			for (size_t i = 0; i < tokens.size(); ++i) {
-				std::cout << i << tokens[i] << std::endl;
-			}
-			std::cout << tokens.size() << std::endl;
-			std::cout << " __." << std::endl;
-
-			Client user(clientSocketsVector.size(), tokens[1], tokens[3]);
-			std::cout << "getname = " << user.getname() << std::endl;
-			std::cout << "getuser = " << user.getuser() << std::endl;
-
-			std::stringstream ss;
-
-			// Utilisation de std::cout pour insérer du texte dans ss
-			ss << ":bar.exemple.com 001 " << user.getname() << ":Welcome to the ft_irc " << user.getname() << "!"<< user.getname() << "@foo.example.com";
-
-			// Convertir le contenu de ss en std::string
-			std::string result = ss.str();
-			std::cout << result << std::endl;
-			send(new_fd, result.c_str(), sizeof(result), 0);
-		}
-*/
-
-
-		if (ret < 0)
+		std::cout << "*__*__*__*" << std::endl;
+	
+		for (unsigned int i = 0; i < clientSocketsVector.size(); ++i)
 		{
-			perror("error poll");
-			exit(EXIT_FAILURE);
+			if (fds[i + 1].revents & POLLIN)
+			{
+				memset(buf, '\0', sizeof(buf));
+				int nbytes = recv(clientSocketsVector[i], buf, sizeof(buf), 0);
+				std::cout << i << buf << std::endl;
+				if (nbytes <= 0)
+				{
+					if (nbytes == 0)
+					{
+						// Client disconnected
+						std::cout << "Client disconnected." << std::endl;
+						close(clientSocketsVector[i]);
+						clientSocketsVector.erase(clientSocketsVector.begin() + i);
+						fds[i + 1].fd = -1; // Mark the file descriptor as closed
+					}
+					else
+					{
+						perror("recv");
+					}
+				}
+				else
+				{
+					// Handle received data
+					std::cout << "Received data from client: " << buf << std::endl;
+				
+					std::string pass = "ff";
+					if (strncmp(buf, "PASS", 4) == 0)
+					{
+						std::vector<std::string> tokens = split(buf, " \n\r\t");
+						std::cout << "PASS   :   " << tokens[1] << std::endl;
+
+						if (strncmp(pass.c_str(), tokens[1].c_str(), sizeof(pass)) == 0) 
+						{
+							std::cout << "pass correct. " << std::endl;
+							send(fds[i+1].fd, "Welcome to the IRC server!\r\n", 28, 0);
+							;
+						}
+						else
+						{
+							close(clientSocketsVector[i]);
+							clientSocketsVector.erase(clientSocketsVector.begin() + i);
+							fds[i + 1].fd = -1;
+						}
+						
+					}
+
+		
+					if (strncmp(buf, "QUIT", 4) == 0)
+						clientSocketsVector.erase(clientSocketsVector.begin() + (ret - 1));
+
+					if (strncmp(buf, "NICK", 4) == 0)
+					{
+
+						std::vector<std::string> tokens = split(buf, " \n\r\t");
+						for (size_t i = 0; i < tokens.size(); ++i) {
+							std::cout << i << tokens[i] << std::endl;
+						}
+						std::cout << tokens.size() << std::endl;
+						std::cout << " __." << std::endl;
+
+						Client user(clientSocketsVector.size(), tokens[1], tokens[3]);
+						std::cout << "getname = " << user.getname() << std::endl;
+						std::cout << "getuser = " << user.getuser() << std::endl;
+
+						/*
+						std::stringstream ss;
+
+						// Utilisation de std::cout pour insérer du texte dans ss
+						ss << ":bar.exemple.com 001 " << user.getname() << ":Welcome to the ft_irc " << user.getname() << "!"<< user.getname() << "@foo.example.com";
+
+						// Convertir le contenu de ss en std::string
+						std::string result = ss.str();
+						std::cout << result << std::endl;
+						send(fds[i].fd, result.c_str(), sizeof(result), 0);
+						*/
+						
+					}
+					if (strncmp(buf, "JOIN", 4) == 0)
+					{
+					
+					}
+				
+				}
+			}
 		}
+
 
 		if (fds[0].revents & POLLIN)
 		{
 			int new_fd = accept(sockfd, NULL, NULL);
 			if (new_fd < 0)
 			{
-				perror("error accept");
+				perror("accept");
 				continue;
 			}
 			std::cout << "New connection accepted." << std::endl;
 			fds[clientSocketsVector.size() + 1].fd = new_fd;
 			fds[clientSocketsVector.size() + 1].events = POLLIN;
 			clientSocketsVector.push_back(new_fd);
-			//std::cout << "welcome send to " << new_fd << std::endl;
-			//send(new_fd, "Welcome to the IRC server!\n", 27, 0);
-			//on--;
+		
+			//send(new_fd, "Welcome to the IRC server!\r\n", 28, 0);
 		}
-		if (strncmp(buf,"QUIT",4)==0)
-			clientSocketsVector.erase(clientSocketsVector.begin() + (ret - 1));
-		std::cout << "____ " << ret << " " << sizeof(buf) << " " << buf << std::endl;
+
+		std::cout << "***********************************" << std::endl;
+
 	}
 	close(sockfd);
 	//freeaddrinfo(res);
