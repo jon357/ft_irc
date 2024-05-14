@@ -135,6 +135,8 @@ int main()
 						}
 						else
 						{
+							std::cout << "pass incorrect. " << std::endl;
+							send(fds[i+1].fd, "Bad Password!\n", 14, 0);
 							close(clientSocketsVector[i]);
 							clientSocketsVector.erase(clientSocketsVector.begin() + i);
 							fds[i + 1].fd = -1;
@@ -142,34 +144,88 @@ int main()
 						
 					}
 
+					if (strncmp(buf, "CAP", 3) == 0)
+					{
+						std::vector<std::string> tokens = split(buf, " \n\r\t");
+						if (tokens.size() != 3)
+						{
+							std::cout << "CAP PASS   :   " << tokens[3] << tokens[4] << std::endl;
+							if (strncmp("PASS", tokens[3].c_str(), 4) == 0)
+							{
+								if (strncmp(pass.c_str(), tokens[4].c_str(), sizeof(pass)) == 0) 
+								{
+									std::cout << "pass correct. " << std::endl;
+									//send(fds[i+1].fd, "Welcome to the IRC server!\r\n", 28, 0);
+									;
+								}
+								else
+								{
+									std::cout << "pass incorrect. " << std::endl;
+									send(fds[i+1].fd, "Bad Password!\n", 14, 0);
+									close(clientSocketsVector[i]);
+									clientSocketsVector.erase(clientSocketsVector.begin() + i);
+									fds[i + 1].fd = -1;
+								}
+
+							}
+						}
+
+					}
+
+
 		
 					if (strncmp(buf, "QUIT", 4) == 0)
 						clientSocketsVector.erase(clientSocketsVector.begin() + (ret - 1));
 
 					if (strncmp(buf, "NICK", 4) == 0)
 					{
-
-						std::vector<std::string> tokens = split(buf, " \n\r\t");
-						for (size_t i = 0; i < tokens.size(); ++i) {
-							std::cout << i << tokens[i] << std::endl;
+						int j = 0;
+						int find = 0;
+						while(buf[j])
+						{
+							if (buf[j]=='\r')
+								find = 1;
+							j++;
 						}
-						std::cout << tokens.size() << std::endl;
-						std::cout << " __." << std::endl;
+						if (find == 1)
+						{
 
-						Client user(clientSocketsVector.size(), tokens[1], tokens[3]);
-						std::cout << "getname = " << user.getname() << std::endl;
-						std::cout << "getuser = " << user.getuser() << std::endl;
+							std::vector<std::string> tokens = split(buf, " \n\r\t");
+							for (size_t i = 0; i < tokens.size(); ++i) {
+								std::cout << i << tokens[i] << std::endl;
+							}
+							std::cout << tokens.size() << std::endl;
+							std::cout << " __." << std::endl;
+
+							Client user(clientSocketsVector.size(), tokens[1], tokens[3]);
+							std::cout << "getname = " << user.getname() << std::endl;
+							std::cout << "getuser = " << user.getuser() << std::endl;
+
+							std::stringstream ss;
+
+							// Utilisation de std::cout pour insérer du texte dans ss
+							ss << user.getuser() << " :Welcome to the 42 Network, " << user.getname();
+
+							// Convertir le contenu de ss en std::string
+							std::string result = ss.str();
+							std::cout << result << std::endl;
+							send(fds[i].fd, result.c_str(), sizeof(result), 0);
+							
+							ss << user.getuser() << " :Your host is ft_irc, running version 42.0";
+							std::string result = ss.str();
+							std::cout << result << std::endl;
+							send(fds[i].fd, result.c_str(), sizeof(result), 0);
+
+							ss << user.getuser() << " :This server was created 42 42 2042";
+							std::string result = ss.str();
+							std::cout << result << std::endl;
+							send(fds[i].fd, result.c_str(), sizeof(result), 0);
+
+						}
 
 						/*
-						std::stringstream ss;
 
-						// Utilisation de std::cout pour insérer du texte dans ss
-						ss << ":bar.exemple.com 001 " << user.getname() << ":Welcome to the ft_irc " << user.getname() << "!"<< user.getname() << "@foo.example.com";
 
-						// Convertir le contenu de ss en std::string
-						std::string result = ss.str();
-						std::cout << result << std::endl;
-						send(fds[i].fd, result.c_str(), sizeof(result), 0);
 						*/
 						
 					}
