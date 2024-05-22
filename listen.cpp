@@ -11,18 +11,16 @@
 #include <sstream>
 #include <cstring>
 #include <vector>
+#include <map>
 #include <iostream>
 
-#define PORT "8000"
+#include "RPL.hpp"
+
 #define MAX_CLIENTS 10
 #define MAX_CHANNELS 10
 #define MAX_CHANNEL_NAME 50
 
 #include "Client.hpp"
-
-void send_message(int client_socket, const char *message) {
-	write(client_socket, message, strlen(message));
-}
 
 std::vector<std::string> split(const std::string& input, const std::string& delimiters) {
     std::vector<std::string> result;
@@ -44,8 +42,17 @@ std::vector<std::string> split(const std::string& input, const std::string& deli
     return result;
 }
 
-int main()
+int main(int argc, char * argv[])
 {
+	const char* port = "8000";
+	std::string pass = argv[2];
+	if (argc != 3)
+		return(-1);
+	else
+	{
+		port = argv[1];
+		pass = argv[2];
+	}
 	struct addrinfo hints, *res;
 	char buf[512];
 
@@ -54,7 +61,7 @@ int main()
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	
-	if (getaddrinfo(NULL, PORT, &hints, &res) != 0)
+	if (getaddrinfo(NULL, port, &hints, &res) != 0)
 	{
 		perror("getaddrinfo");
 		exit(EXIT_FAILURE);
@@ -75,15 +82,14 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 
-	std::cout << "Server listening on port " << PORT << "..." << std::endl;
+	std::cout << "Server listening on port " << port << "..." << std::endl;
 	struct pollfd fds[MAX_CLIENTS];
 	fds[0].fd = sockfd;
 	fds[0].events = POLLIN;
 	int on = 5;
 
 	std::vector<int> clientSocketsVector;
-
-	
+	std::map<int,Client> ClientMap;
 
 	while (on > 1)
 	{
@@ -96,6 +102,8 @@ int main()
 	
 		for (unsigned int i = 0; i < clientSocketsVector.size(); ++i)
 		{
+			std::cout << "** " << i << " " << ClientMap[i].getfd() << " " << ClientMap[i].getname() << " **" << std::endl;
+
 			if (fds[i + 1].revents & POLLIN)
 			{
 				memset(buf, '\0', sizeof(buf));
@@ -120,8 +128,7 @@ int main()
 				{
 					// Handle received data
 					std::cout << "Received data from client: " << buf << std::endl;
-				
-					std::string pass = "ff";
+
 					if (strncmp(buf, "PASS", 4) == 0)
 					{
 						std::vector<std::string> tokens = split(buf, " \n\r\t");
@@ -130,7 +137,7 @@ int main()
 						if (strncmp(pass.c_str(), tokens[1].c_str(), sizeof(pass)) == 0) 
 						{
 							std::cout << "pass correct. " << std::endl;
-							send(fds[i+1].fd, "Welcome to the IRC server!\r\n", 28, 0);
+							//send(fds[i+1].fd, "Welcome to the IRC server!\r\n", 28, 0);
 							;
 						}
 						else
@@ -140,10 +147,8 @@ int main()
 							close(clientSocketsVector[i]);
 							clientSocketsVector.erase(clientSocketsVector.begin() + i);
 							fds[i + 1].fd = -1;
-						}
-						
+						}	
 					}
-
 					if (strncmp(buf, "CAP", 3) == 0)
 					{
 						std::vector<std::string> tokens = split(buf, " \n\r\t");
@@ -166,79 +171,48 @@ int main()
 									clientSocketsVector.erase(clientSocketsVector.begin() + i);
 									fds[i + 1].fd = -1;
 								}
-
 							}
 						}
-
 					}
-
-
-		
 					if (strncmp(buf, "QUIT", 4) == 0)
 						clientSocketsVector.erase(clientSocketsVector.begin() + (ret - 1));
-
 					if (strncmp(buf, "NICK", 4) == 0)
 					{
-						int j = 0;
-						int find = 0;
-						while(buf[j])
-						{
-							if (buf[j]=='\r')
-								find = 1;
-							j++;
+						std::vector<std::string> tokens = split(buf, " \n\r\t");
+						for (size_t t = 0; t < tokens.size(); ++t) {
+							std::cout << t << tokens[t] << std::endl;
 						}
-						if (find == 1)
+						std::cout << tokens.size() << std::endl;
+						ClientMap[i].setname(tokens[1]);
+						ClientMap[i].setuser(tokens[3]);
+						if (ClientMap[i].getlogged() == false)
 						{
-
-							std::vector<std::string> tokens = split(buf, " \n\r\t");
-							for (size_t i = 0; i < tokens.size(); ++i) {
-								std::cout << i << tokens[i] << std::endl;
-							}
-							std::cout << tokens.size() << std::endl;
-							std::cout << " __." << std::endl;
-
-							Client user(clientSocketsVector.size(), tokens[1], tokens[3]);
-							std::cout << "getname = " << user.getname() << std::endl;
-							std::cout << "getuser = " << user.getuser() << std::endl;
-
-							std::stringstream ss;
-
-							// Utilisation de std::cout pour insérer du texte dans ss
-							ss << user.getuser() << " :Welcome to the 42 Network, " << user.getname();
-
-							// Convertir le contenu de ss en std::string
-							std::string result = ss.str();
-							std::cout << result << std::endl;
-							send(fds[i].fd, result.c_str(), sizeof(result), 0);
+							std::cout << "getname = " << ClientMap[i].getname() << std::endl;
+							std::cout << "getuser = " << ClientMap[i].getuser() << std::endl;
+							ClientMap[i].setlogged();
 							
-							ss << user.getuser() << " :Your host is ft_irc, running version 42.0";
-							std::string result = ss.str();
-							std::cout << result << std::endl;
-							send(fds[i].fd, result.c_str(), sizeof(result), 0);
-
-							ss << user.getuser() << " :This server was created 42 42 2042";
-							std::string result = ss.str();
-							std::cout << result << std::endl;
-							send(fds[i].fd, result.c_str(), sizeof(result), 0);
+							send(ClientMap[i].getfd(),RPL_WELCOME(ClientMap[i]).c_str(), RPL_WELCOME(ClientMap[i]).size(), 0);
+							std::cout << "88 " << i << " " << ClientMap[i].getfd() << " " << ClientMap[i].getname() << " 99" << std::endl;
 
 						}
-
 						/*
-
-
+						ss << ": 001 " << user.getuser() << " :Welcome to the 42 Network, " << user.getname() << "\r\n";
+						ss << ": 002 " << user.getuser() << " :Your host is ft_irc, running version 42.0" << "\r\n";
+						ss << ": 003 " << user.getuser() << " :This server was created 42 42 2042" << "\r\n";
 						*/
-						
+
 					}
 					if (strncmp(buf, "JOIN", 4) == 0)
 					{
 					
 					}
-				
+					if (strncmp(buf, "stop", 4) == 0)
+					{
+						break ;
+					}
 				}
 			}
 		}
-
-
 		if (fds[0].revents & POLLIN)
 		{
 			int new_fd = accept(sockfd, NULL, NULL);
@@ -250,45 +224,13 @@ int main()
 			std::cout << "New connection accepted." << std::endl;
 			fds[clientSocketsVector.size() + 1].fd = new_fd;
 			fds[clientSocketsVector.size() + 1].events = POLLIN;
+			ClientMap[clientSocketsVector.size()] = Client(new_fd, "anon", "anon");
+			std::cout << "accept = " << new_fd << " " << ClientMap[clientSocketsVector.size()].getfd() << std::endl;
 			clientSocketsVector.push_back(new_fd);
-		
-			//send(new_fd, "Welcome to the IRC server!\r\n", 28, 0);
 		}
-
 		std::cout << "***********************************" << std::endl;
-
 	}
 	close(sockfd);
 	//freeaddrinfo(res);
 	return 0;
 }
-
-
-
-
-		/*
-		else
-		{
-			for (int i = 1; i < clientSocketsVector.size() + 1; i++) {
-				std::cout << "--Received: " << buf << std::endl;
-				if (strncmp(buf,"LIST",4)==0)
-				{
-					std::cout << "--LIST----- " << std::endl;
-					send(fds[i].fd,"",1,0);
-				}
-				if (strncmp(buf,"JOIN",4)==0)
-				{
-					std::cout << "--JOIN----- " << std::endl;
-					// Envoi des messages au client
-					//send_message(fds[i].fd, ":user JOIN :d\n");
-					send_message(fds[i].fd, ":UserJID JOIN :ChannelName");
-					send_message(fds[i].fd, ":Domain [RPL_TOPIC][1] NickName ChannelName :Topic");
-					//send_message(fds[i].fd, ":Domain [RPL_NAMREPLY][1] NickName = ChannelName : NameList :Domain [RPL_ENDOFNAMES][1] NickName ChannelName :End of Names list");
-				//for (int j = 1; j < clientSocketsVector.size() + 1; j++) {
-				//	//printf("Received: %s", buf);
-				//	send(fds[j].fd,buf, nbytes, 0);
-				//}
-				}
-			}
-		}
-		*/
