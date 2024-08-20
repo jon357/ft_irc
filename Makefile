@@ -1,25 +1,44 @@
-NAME =  ft_irc
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    Makefile                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: jcheca <jcheca@student.42.fr>              +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2024/05/15 12:13:50 by jcheca            #+#    #+#              #
+#    Updated: 2024/06/12 14:51:11 by jcheca           ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
-SRC		=	listen.cpp Client.cpp
+CXX = g++
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 
-CC 		= c++
+SRC_DIR = src
+INC_DIR = includes
+OBJ_DIR = obj
+LOG_DIR = logs
 
-FLAGS	= -std=c++98 -Wall -Wextra -Werror 
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-OBJS 	= $(SRC:.c=.o)
+NAME = ircserv
+
+all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CC) $(FLAGS) $(SRC) -o $(NAME)
+	$(CXX) $(CXXFLAGS) -I$(INC_DIR) -o $@ $^ 
+	mkdir -p $(LOG_DIR)
+	touch $(LOG_DIR)/irc_server.log
 
-all: $(NAME) $(OBJS)
-
-%.o: %.c
-		$(CC) $(FLAGS) -c $< -o $@
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	mkdir -p $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -I$(INC_DIR) -c $< -o $@
 
 clean:
-	rm -rf $(NAME)
+	rm -rf $(OBJ_DIR) $(NAME)
 
 fclean: clean
+	rm -rf $(LOG_DIR)
 
 re: fclean all
 
